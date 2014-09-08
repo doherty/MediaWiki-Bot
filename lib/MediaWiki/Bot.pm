@@ -119,13 +119,6 @@ For example:
         login_data  => { username => "Mike's bot account", password => "password" },
     });
 
-For backward compatibility, you can specify up to three parameters:
-
-    my $bot = MediaWiki::Bot->new('My custom useragent string', $assert, $operator);
-
-B<This form is deprecated> will never do auto-login or autoconfiguration, and emits
-deprecation warnings.
-
 =over 4
 
 For further reading:
@@ -156,43 +149,20 @@ L<Where is api.php|https://github.com/MediaWiki-Bot/MediaWiki-Bot/wiki/Where-is-
 
 sub new {
     my $package = shift;
-    my $agent;
-    my $assert;
-    my $operator;
-    my $maxlag;
-    my $protocol;
-    my $host;
-    my $path;
-    my $login_data;
-    my $debug;
+    croak 'new must be called with a hashref'
+        if @_ and (not ref $_[0] or ref $_[0] ne 'HASH');
 
-    if (ref $_[0] eq 'HASH') {
-        $agent      = $_[0]->{agent};
-        $assert     = $_[0]->{assert};
-        $operator   = $_[0]->{operator};
-        $maxlag     = $_[0]->{maxlag};
-        $protocol   = $_[0]->{protocol};
-        $host       = $_[0]->{host};
-        $path       = $_[0]->{path};
-        $login_data = $_[0]->{login_data};
-        $debug      = $_[0]->{debug};
-    }
-    else {
-        warnings::warnif('deprecated', 'Please pass a hashref; this method of calling '
-            . 'the constructor is deprecated and will be removed in a future release')
-            if @_;
-        $agent    = shift;
-        $assert   = shift;
-        $operator = shift;
-        $maxlag   = shift;
-        $protocol = shift;
-        $host     = shift;
-        $path     = shift;
-        $debug    = shift;
-    }
-
-    $assert   =~ s/[&?]assert=// if $assert; # Strip out param part, leaving just the value
-    $operator =~ s/^User://i     if $operator;
+    my $agent       = $_[0]->{agent};
+    my $assert      = $_[0]->{assert};
+    $assert         =~ s/[&?]assert=// if $assert; # Strip out param part, leaving just the value
+    my $operator    = $_[0]->{operator};
+    $operator       =~ s/^User://i if $operator;
+    my $maxlag      = $_[0]->{maxlag};
+    my $protocol    = $_[0]->{protocol};
+    my $host        = $_[0]->{host};
+    my $path        = $_[0]->{path};
+    my $login_data  = $_[0]->{login_data};
+    my $debug       = $_[0]->{debug};
 
     if (not $agent and not $operator) {
         carp q{You should provide either a customized user agent string }
@@ -277,36 +247,16 @@ For example:
         path        => 'wikipedia/meta/w',
     });
 
-For backward compatibility, you can specify up to two parameters:
-
-    $bot->set_wiki($host, $path);
-
-B<This form is deprecated>, and will emit deprecation warnings.
-
 =cut
 
 sub set_wiki {
     my $self = shift;
-    my $host;
-    my $path;
-    my $protocol;
+    croak 'set_wiki must be called with a hashref'
+        if @_ and (not ref $_[0] or ref $_[0] ne 'HASH');
 
-    if (ref $_[0] eq 'HASH') {
-        $host     = $_[0]->{host};
-        $path     = $_[0]->{path};
-        $protocol = $_[0]->{protocol};
-    }
-    else {
-        warnings::warnif('deprecated', 'Please pass a hashref; this method of calling '
-            . 'set_wiki is deprecated, and will be removed in a future release');
-        $host = shift;
-        $path = shift;
-    }
-
-    # Set defaults
-    $protocol = $self->{protocol} || 'https'            unless defined($protocol);
-    $host     = $self->{host}     || 'en.wikipedia.org' unless defined($host);
-    $path     = $self->{path}     || 'w'                unless defined($path);
+    my $host     = defined $_[0]->{host} ? $_[0]->{host} : 'en.wikipedia.org';
+    my $path     = defined $_[0]->{path} ? $_[0]->{path} : 'w';
+    my $protocol = defined $_[0]->{protocol} ? $_[0]->{protocol} : 'https';
 
     # Clean up the parts we will build a URL with
     $protocol =~ s,://$,,;
@@ -370,13 +320,6 @@ Setting an appropriate default assert.
 
 You can skip this autoconfiguration by passing C<autoconfig =E<gt> 0>
 
-For backward compatibility, you can call this as
-
-    $bot->login($username, $password);
-
-B<This form is deprecated>, and will emit deprecation warnings. It will
-never do autoconfiguration or SUL login.
-
 =head3 Single User Login
 
 On WMF wikis, C<do_sul> specifies whether to log in on all projects. The default
@@ -408,37 +351,26 @@ L<Logging in|https://github.com/MediaWiki-Bot/MediaWiki-Bot/wiki/Logging-in>
 
 sub login {
     my $self = shift;
-    my $username;
-    my $password;
-    my $lgdomain;
-    my $autoconfig;
-    my $basic_auth;
-    my $do_sul;
-    if (ref $_[0] eq 'HASH') {
-        $username   = $_[0]->{username};
-        $password   = $_[0]->{password};
-        $autoconfig = defined($_[0]->{autoconfig}) ? $_[0]->{autoconfig} : 1;
-        $basic_auth = $_[0]->{basic_auth};
-        $do_sul     = $_[0]->{do_sul} || 0;
-        $lgdomain   = $_[0]->{lgdomain};
-    }
-    else {
-        warnings::warnif('deprecated', 'Please pass a hashref; this method of calling '
-            . 'login is deprecated and will be removed in a future release');
-        $username   = shift;
-        $password   = shift;
-        $autoconfig = 0;
-        $do_sul     = 0;
-    }
-    $self->{username} = $username;    # Remember who we are
+    croak 'login must be called with a hashref'
+        if @_ and (not ref $_[0] or ref $_[0] ne 'HASH');
 
-    carp "Logging in over plain HTTP is a bad idea, we would be sending secrets"
-        . " (passwords or cookies) in plaintext over an insecure connection."
-        . " To protect against eavesdroppers, set protocol => 'https'"
+    my $username        = $_[0]->{username};
+    $self->{username}   = $username; # Remember who we are
+    my $password        = $_[0]->{password};
+    my $autoconfig      = defined $_[0]->{autoconfig} ? $_[0]->{autoconfig} : 1;
+    my $do_sul          = defined $_[0]->{do_sul}     ? $_[0]->{do_sul}     : 0;
+    my $lgdomain        = $_[0]->{lgdomain};
+
+    carp q{Logging in over plain HTTP is a bad idea! We would be sending secrets}
+        . q{ (passwords or cookies) in plaintext over an insecure connection.}
+        . q{ To protect against eavesdroppers, set protocol => 'https'}
         unless $self->{protocol} eq 'https';
 
+    croak 'SSL is now supported on the main Wikimedia Foundation sites'
+        if $self->{host} eq 'secure.wikimedia.org';
+
     # Handle basic auth first, if needed
-    if ($basic_auth) {
+    if (my $basic_auth = $_[0]->{basic_auth}) {
         warn 'Applying basic auth credentials' if $self->{debug} > 1;
         $self->{api}->{ua}->credentials(
             $basic_auth->{netloc},
@@ -446,12 +378,6 @@ sub login {
             $basic_auth->{uname},
             $basic_auth->{pass}
         );
-    }
-
-    if ($self->{host} eq 'secure.wikimedia.org') {
-        warnings::warnif('deprecated', 'SSL is now supported on the main Wikimedia Foundation sites. '
-            . 'Use en.wikipedia.org (or whatever) instead of secure.wikimedia.org.');
-        return;
     }
 
     if($do_sul) {
@@ -473,7 +399,8 @@ sub login {
     }
 
     unless ($password) {
-        carp q{Cookies didn't get us logged in, and no password to continue with authentication} if $self->{debug};
+        carp q{Cookies didn't get us logged in, and no password to continue with authentication}
+            if $self->{debug};
         return;
     }
 
@@ -638,12 +565,6 @@ I<section> - edit a single section (identified by number) instead of the whole p
 
 An MD5 hash is sent to guard against data corruption while in transit.
 
-You can also call this as:
-
-    $bot->edit($page, $text, $summary, $is_minor, $assert, $markasbot);
-
-B<This form is deprecated>, and will emit deprecation warnings.
-
 =head3 CAPTCHAs
 
 If a L<https://en.wikipedia.org/wiki/CAPTCHA|CAPTCHA> is encountered, the
@@ -679,42 +600,23 @@ C<captcha_id> and C<captcha_solution> parameters:
 B<References:> L<Editing pages|https://github.com/MediaWiki-Bot/MediaWiki-Bot/wiki/Editing-pages>,
 L<API:Edit|https://www.mediawiki.org/wiki/API:Edit>,
 L<API:Tokens|https://www.mediawiki.org/wiki/API:Tokens>
+
 =cut
 
 sub edit {
     my $self = shift;
-    my $page;
-    my $text;
-    my $summary;
-    my $is_minor;
-    my $assert;
-    my $markasbot;
-    my $section;
-    my $captcha_id;
-    my $captcha_solution;
+    croak 'edit must be called with a hashref'
+        if @_ and (not ref $_[0] or ref $_[0] ne 'HASH');
 
-    if (ref $_[0] eq 'HASH') {
-        $page      = $_[0]->{page};
-        $text      = $_[0]->{text};
-        $summary   = $_[0]->{summary};
-        $is_minor  = $_[0]->{minor};
-        $assert    = $_[0]->{assert};
-        $markasbot = $_[0]->{markasbot};
-        $section   = $_[0]->{section};
-        $captcha_id         = $_[0]->{captcha_id};
-        $captcha_solution   = $_[0]->{captcha_solution};
-    }
-    else {
-        warnings::warnif('deprecated', 'Please pass a hashref; this method of calling '
-            . 'edit is deprecated, and will be removed in a future release.');
-        $page      = shift;
-        $text      = shift;
-        $summary   = shift;
-        $is_minor  = shift;
-        $assert    = shift;
-        $markasbot = shift;
-        $section   = shift;
-    }
+    my $page        = $_[0]->{page};
+    my $text        = $_[0]->{text};
+    my $summary     = $_[0]->{summary};
+    my $is_minor    = defined $_[0]->{minor} ? $_[0]->{minor} : 1;
+    my $assert      = $_[0]->{assert};
+    my $markasbot   = defined $_[0]->{markasbot} ? $_[0]->{markasbot} : 1;
+    my $section     = $_[0]->{section};
+    my $captcha_id          = $_[0]->{captcha_id};
+    my $captcha_solution    = $_[0]->{captcha_solution};
 
     # Set defaults
     $summary = 'BOT: Changing page text' unless $summary;
@@ -724,8 +626,6 @@ sub edit {
     else {
         $assert = $self->{assert};
     }
-    $is_minor  = 1 unless defined($is_minor);
-    $markasbot = 1 unless defined($markasbot);
 
     # Clear any captcha data that might remain from a previous edit attempt
     delete $self->{error}->{captcha};
@@ -1213,72 +1113,6 @@ sub get_last {
     my (undef, $data) = %{ $res->{query}->{pages} };
     my $revid = $data->{revisions}[0]->{revid};
     return $revid;
-}
-
-=head2 update_rc
-
-B<This method is deprecated>, and will emit deprecation warnings.
-Replace calls to C<update_rc()> with calls to the newer C<recentchanges()>, which
-returns all available data, including rcid.
-
-Returns an array containing the $limit most recent changes to the wiki's I<main
-namespace>. The array contains hashrefs with keys title, revid, old_revid,
-and timestamp.
-
-    my @rc = $bot->update_rc(5);
-    foreach my $hashref (@rc) {
-        my $title = $hash->{'title'};
-        print "$title\n";
-    }
-
-The L</"Options hashref"> is also available:
-
-    # Use a callback for incremental processing:
-    my $options = { hook => \&mysub, };
-    $bot->update_rc($options);
-    sub mysub {
-        my ($res) = @_;
-        foreach my $hashref (@$res) {
-            my $page = $hashref->{'title'};
-            print "$page\n";
-        }
-    }
-
-=cut
-
-sub update_rc {
-    warnings::warnif('deprecated', 'update_rc is deprecated, and may be removed '
-        . 'in a future release. Please use recentchanges(), which provides more '
-        . 'data, including rcid');
-    my $self    = shift;
-    my $limit   = shift || 'max';
-    my $options = shift;
-
-    my $hash = {
-        action      => 'query',
-        list        => 'recentchanges',
-        rcnamespace => 0,
-        rclimit     => $limit,
-    };
-    $options->{max} = 1 unless $options->{max};
-
-    my $res = $self->{api}->list($hash, $options);
-    return $self->_handle_api_error() unless $res;
-    return RET_TRUE if not ref $res; # Not a ref when using callback
-
-    my @rc_table;
-    foreach my $hash (@{$res}) {
-        push(
-            @rc_table,
-            {
-                title     => $hash->{title},
-                revid     => $hash->{revid},
-                old_revid => $hash->{old_revid},
-                timestamp => $hash->{timestamp},
-            }
-        );
-    }
-    return @rc_table;
 }
 
 =head2 recentchanges($wiki_hashref, $options_hashref)
@@ -1930,9 +1764,6 @@ sub image_usage {
     my $options = shift;
 
     if ($image !~ m/^File:|Image:/) {
-        warnings::warnif('deprecated', q{Please include the canonical File: }
-            . q{namespace in the image name. If you don't, MediaWiki::Bot might }
-            . q{incur a network round-trip to get the localized namespace name});
         my $ns_data = $self->_get_ns_data();
         my $file_ns_name = $ns_data->{+NS_FILE};
         if ($image !~ m/^\Q$file_ns_name\E:/) {
@@ -2022,22 +1853,6 @@ sub global_image_usage {
         : @data;
 }
 
-=head2 links_to_image
-
-A backward-compatible call to L</image_usage>. You can provide only the image
-title.
-
-B<This method is deprecated>, and will emit deprecation warnings.
-
-=cut
-
-sub links_to_image {
-    warnings::warnif('deprecated', 'links_to_image is an alias of image_usage; '
-        . 'please use the new name');
-    my $self = shift;
-    return $self->image_usage($_[0]);
-}
-
 =head2 is_blocked
 
     my $blocked = $bot->is_blocked('User:Mike.lifeguard');
@@ -2073,20 +1888,6 @@ sub is_blocked {
     else {
         confess "This query should return at most one result, but the API returned more than that.";
     }
-}
-
-=head2 test_blocked
-
-Retained for backwards compatibility. Use L</is_blocked> for clarity.
-
-B<This method is deprecated>, and will emit deprecation warnings.
-
-=cut
-
-sub test_blocked { # For backwards-compatibility
-    warnings::warnif('deprecated', 'test_blocked is an alias of is_blocked; '
-        . 'please use the new name. This alias might be removed in a future release');
-    return (is_blocked(@_));
 }
 
 =head2 test_image_exists
@@ -2442,20 +2243,6 @@ sub was_blocked {
     else {
         confess "This query should return at most one result, but the API returned more than that.";
     }
-}
-
-=head2 test_block_hist
-
-Retained for backwards compatibility. Use L</was_blocked> for clarity.
-
-B<This method is deprecated>, and will emit deprecation warnings.
-
-=cut
-
-sub test_block_hist { # Backwards compatibility
-    warnings::warnif('deprecated', 'test_block_hist is an alias of was_blocked; '
-        . 'please use the new method name. This alias might be removed in a future release');
-    return (was_blocked(@_));
 }
 
 =head2 expandtemplates
@@ -3097,21 +2884,6 @@ sub get_protection {
     else {
         return $out_data;
     }
-}
-
-=head2 is_protected
-
-This is a synonym for L</get_protection>, which should be used in preference.
-
-B<This method is deprecated>, and will emit deprecation warnings.
-
-=cut
-
-sub is_protected {
-    warnings::warnif('deprecated', 'is_protected is deprecated, and might be '
-        . 'removed in a future release; please use get_protection instead');
-    my $self = shift;
-    return $self->get_protection(@_);
 }
 
 =head2 patrol

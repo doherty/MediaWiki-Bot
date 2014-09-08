@@ -11,7 +11,7 @@ my $t = __FILE__;
 my $username = $ENV{PWPUsername};
 my $password = $ENV{PWPPassword};
 plan $username && $password
-    ? (tests => 7)
+    ? (tests => 6)
     : (skip_all => q{I can't log in without credentials});
 unlink ".mediawiki-bot-$username-cookies"
     if $username and -e ".mediawiki-bot-$username-cookies";
@@ -25,25 +25,18 @@ subtest 'warn on HTTP' => sub {
     my $insecure = MediaWiki::Bot->new({ agent => $useragent, protocol => 'http', host => 'test.wikipedia.org' });
 
     warning_like(
-        sub { is($insecure->login($username, $password), 1, 'Warning logging in w/ HTTP'); },
-        [
-            { carped => qr/^\QPlease pass a hashref/ },
-            { carped => qr/^\QLogging in over plain HTTP is a bad idea/ },
-        ],
-        'Got expected warnings'
+        sub { is($insecure->login({ username => $username, password => $password }), 1, 'Warning logging in w/ HTTP'); },
+        [{ carped => qr/^\QLogging in over plain HTTP is a bad idea/ }],
+        'Got expected HTTP warning'
     );
 };
 
 subtest 'one wiki' => sub {
-    plan tests => 3;
+    plan tests => 2;
 
     my $bot = MediaWiki::Bot->new({ agent => $useragent, host => $host, protocol => 'https' });
 
-    warning_is(
-        sub {is($bot->login($username, $password), 1, 'Login OK'); },
-        'Please pass a hashref; this method of calling login is deprecated and will be removed in a future release',
-        'old login call style warns'
-    );
+    is($bot->login({ username => $username, password => $password }), 1, 'Login OK');
     ok($bot->_is_loggedin(), q{Double-check we're logged in});
 };
 
@@ -89,22 +82,6 @@ subtest 'fail' => sub {
         login_data => { username => q{Mike's test account}, password => q{} },
     });
     is($failbot, undef, 'Auto-login failed');
-};
-
-subtest 'secure' => sub {
-    plan tests => 1;
-
-    my $secure = MediaWiki::Bot->new({
-        agent       => $useragent,
-        protocol    => 'https',
-        host        => 'secure.wikimedia.org',
-        path        => 'wikipedia/en/w',
-    });
-
-    warning_like(
-        sub { $secure->login({ username => $username, password => $password, do_sul => 1 }) },
-        qr{^\QSSL is now supported on the main Wikimedia Foundation sites.}
-    );
 };
 
 subtest 'new-secure' => sub {

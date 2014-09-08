@@ -1,4 +1,4 @@
-Changelog for {{$dist->name}}
+Changelog for MediaWiki-Bot
 
 {{$NEXT}}
   - Get github metadata from the MediaWiki-Bot organization's repo [gh-69]
@@ -6,6 +6,8 @@ Changelog for {{$dist->name}}
   - Mark flaky tests as extended
   - Use HTTPS by default and warn if ever trying to log in over HTTP
   - Added pointers to API documentation in POD [gh-63]
+  - Remove long-deprecated methods and method signatures. This makes room for
+    future improvement, possibly using native v5.20.0 signatures.
 
 5.006000  2014-09-01
   - Move subpages correctly when requested [GH#55 - labster]

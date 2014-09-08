@@ -1,8 +1,7 @@
 use strict;
 use warnings;
 use Test::RequiresInternet 'test.wikipedia.org' => 80;
-use Test::More tests => 7;
-use Test::Warn;
+use Test::More tests => 5;
 
 use MediaWiki::Bot;
 my $t = __FILE__;
@@ -15,18 +14,11 @@ my $bot = MediaWiki::Bot->new({
 my $file = 'File:Wiki.png';
 
 my @pages = $bot->image_usage($file, undef, undef, { max => 1 });
-my @pages_bc;
-warning_like(
-    sub { @pages_bc = $bot->links_to_image($file, undef, undef, { max => 1 }); },
-    qr/links_to_image is an alias of image_usage; please use the new name/,
-    'links_to_image is deprecated'
-);
 
 ok(     @pages,                                             'No error');
 cmp_ok( scalar @pages,                  '>', 1,             'More than one result');
 ok(     defined($pages[0]),                                 'Something was returned');
 like(   $pages[0],                      qr/\w+/,            'The title looks valid');
-is_deeply(\@pages, \@pages_bc,                              'The BC method returned the same as the current method');
 
 $bot->image_usage($file, undef, 'nonredirects', { hook => \&mysub, max => 5 });
 my $is_redir = 1;
